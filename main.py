@@ -2,6 +2,7 @@ import hashlib #for sha256 encoding
 from PIL import ImageFont, ImageDraw #for fonts
 from tkinter import *
 import tkinter.font
+import string
 
 ################################################################################
 # initializer
@@ -9,9 +10,13 @@ import tkinter.font
 
 def init(data):
     data.mode = "start"
+    data.loginButton = Button(data.width/2, data.height*0.55, 100, 30, "Login")
+    data.registerButton = Button(data.width/2, data.height*0.7, 100, 30, "Register")
+    data.creditButton = Button(data.width*0.9, data.height*0.9, 70, 25, "Credit")
+    data.creditBackButton = Button(data.width/2, data.height*0.85, 80, 25, "< Back")
 
 ################################################################################
-# general helpers
+# general helpers/classes
 ################################################################################
 
 #draws index card pattern on entire canvas
@@ -46,12 +51,37 @@ def writeFile(path, contents):
     with open(path, "wt") as f:
         f.write(contents)
 
+class Button(object):
+    def __init__(self, x, y, w, h, text):
+        self.x0 = x - w
+        self.x1 = x + w
+        self.y0 = y - h
+        self.y1 = y + h
+        self.x = x
+        self.y = y
+        self.text = text
+
+    def draw(self, canvas, fontSize):
+        roundRectangle(canvas, self.x0, self.y0, self.x1, self.y1, fill='white', 
+            width=2, outline="black")
+        canvas.create_text(self.x, self.y, text=self.text, font=getFont(fontSize))
+
+    def onPress(self, data, x, y):
+        if (self.x0 < x < self.x1) and (self.y0 < y < self.y1):
+            return True
+
+
 ################################################################################
 # start mode
 ################################################################################
 
 def startMousePressed(event, data):
-    pass
+    if data.loginButton.onPress(data, event.x, event.y):
+        data.mode = "login"
+    elif data.registerButton.onPress(data, event.x, event.y):
+        data.mode = "register"
+    elif data.creditButton.onPress(data, event.x, event.y):
+        data.mode = "credit"
 
 def startKeyPressed(event, data):
     pass
@@ -63,16 +93,39 @@ def startRedrawAll(canvas, data):
     drawIndexCard(canvas, data)
     canvas.create_text(data.width/2, data.height/3.5, text="Flashcard Tutor",
         font=getFont(60))
-    roundRectangle(canvas, data.width/2 - 100, data.height*0.55 - 30, 
-        data.width/2 + 100, data.height*0.55 + 30, fill='white', width=2, 
-        outline="black")
-    canvas.create_text(data.width/2, data.height*0.55, text="Login", font=getFont(25))
-    roundRectangle(canvas, data.width/2 - 100, data.height*0.7 - 30, 
-        data.width/2 + 100, data.height*0.7 + 30, fill='white', width=2, 
-        outline="black")
-    canvas.create_text(data.width/2, data.height*0.7, text="Register", font=getFont(25))
+    data.loginButton.draw(canvas, 25)
+    data.registerButton.draw(canvas, 25)
+    data.creditButton.draw(canvas, 25)
 
+################################################################################
+# credit mode
+################################################################################
 
+def creditMousePressed(event, data):
+    if data.creditBackButton.onPress(data, event.x, event.y):
+        data.mode = "start"
+
+def creditKeyPressed(event, data):
+    pass
+
+def creditTimerFired(data):
+    pass
+
+def creditRedrawAll(canvas, data):
+    drawIndexCard(canvas, data)
+    canvas.create_text(data.width/2, data.height/10, 
+        text="This project was made possible by:", font=getFont(25))
+    data.creditBackButton.draw(canvas, 25)
+    canvas.create_text(data.width*0.1, data.height*0.228, 
+        text='''Jenny Yu - CMU class of 2021, ECE major and HCI
+        minor. She enjoys digital art, computer science,
+        and animals.''',
+        font=getFont(25), anchor=NW)
+    canvas.create_text(data.width*0.1, data.height*0.5, 
+        text='''Ruitao Li - CMU class of 2023, Information Systems
+        major. He enjoys video games in his leisure like 
+        League of Legends and Plants vs. Zombies.''',
+        font=getFont(25), anchor=NW)
 
 ################################################################################
 # mode toggle
@@ -81,18 +134,26 @@ def startRedrawAll(canvas, data):
 def mousePressed(event, data):
     if data.mode == "start":
         startMousePressed(event, data)
+    elif data.mode == "credit":
+        creditMousePressed(event, data)
 
 def keyPressed(event, data):
     if data.mode == "start":
         startKeyPressed(event, data)
+    elif data.mode == "credit":
+        creditKeyPressed(event, data)
 
 def timerFired(data):
     if data.mode == "start":
         startTimerFired(data)
+    elif data.mode == "credit":
+        creditTimerFired(data)
 
 def redrawAll(canvas, data):
     if data.mode == "start":
         startRedrawAll(canvas, data)
+    elif data.mode == "credit":
+        creditRedrawAll(canvas, data)
 
 
 ################################################################################
