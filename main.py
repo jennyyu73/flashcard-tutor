@@ -17,7 +17,10 @@ def init(data):
     data.submitButton = Button(data.width/2, data.height*0.8, 80, 25, "Submit")
     data.underlineBackButton = UnderlineButton(data.width/2, data.height*0.9,
         30, 20, "Back")
-    data.input = False
+    data.password = ""
+    data.username = ""
+    data.inputPassword = False
+    data.inputUsername = False
 
 ################################################################################
 # general helpers/classes
@@ -144,11 +147,38 @@ def creditRedrawAll(canvas, data):
 ################################################################################
 
 def registerMousePressed(event, data):
+    if (data.width*0.42 < event.x < data.width*0.7) and (data.height*0.35 < event.y < data.height*0.45):
+        data.inputUsername = True
+    else:
+        data.inputUsername = False
+    if (data.width*0.42 < event.x < data.width*0.7) and (data.height*0.49 < event.y < data.height*0.59):
+        data.inputPassword = True
+    else:
+        data.inputPassword = False
+
+    if data.submitButton.onPress(event.x, event.y):
+        #check non existing user
+        #create user
+        pass
     if data.underlineBackButton.onPress(event.x, event.y):
         data.mode = "start"
+        data.password = ""
+        data.username = ""
 
 def registerKeyPressed(event, data):
-    pass
+    if data.inputUsername:
+        if event.keysym == "BackSpace":
+            if len(data.username) > 0:
+                data.username = data.username[:-1]
+        elif len(event.keysym) == 1:
+            data.username += event.keysym
+    elif data.inputPassword:
+        if event.keysym == "BackSpace":
+            if len(data.password) > 0:
+                data.password = data.password[:-1]
+        elif len(event.keysym) == 1:
+            data.password += event.keysym
+
 
 def registerTimerFired(data):
     pass
@@ -163,21 +193,54 @@ def registerRedrawAll(canvas, data):
         font=getFont(30))
     canvas.create_text(data.width*0.3, data.height*0.54, text="password:",
         font=getFont(30))
+    userOutline = "#12e3ff" if data.inputUsername else "black" #TODO: change color
+    passOutline = "#12e3ff" if data.inputPassword else "black"
     roundRectangle(canvas, data.width*0.42, data.height*0.35, data.width*0.7,
-        data.height*0.45, width=2, outline="black", fill="white")
+        data.height*0.45, width=2, outline=userOutline, fill="white")
     roundRectangle(canvas, data.width*0.42, data.height*0.49, data.width*0.7,
-        data.height*0.59, width=2, outline="black", fill="white")
+        data.height*0.59, width=2, outline=passOutline, fill="white")
+    canvas.create_text(data.width*0.44, data.height*0.4, text=data.username,
+        font=getFont(25), anchor=W) #TODO: overflow of printing if string too long
+    canvas.create_text(data.width*0.44, data.height*0.54, text=data.password,
+        font=getFont(25), anchor=W)
 
 ################################################################################
 # login mode
 ################################################################################
 
 def loginMousePressed(event, data):
+    if (data.width*0.42 < event.x < data.width*0.7) and (data.height*0.35 < event.y < data.height*0.45):
+        data.inputUsername = True
+    else:
+        data.inputUsername = False
+    if (data.width*0.42 < event.x < data.width*0.7) and (data.height*0.49 < event.y < data.height*0.59):
+        data.inputPassword = True
+    else:
+        data.inputPassword = False
+
+    if data.submitButton.onPress(event.x, event.y):
+        #login user
+        pass
+
     if data.underlineBackButton.onPress(event.x, event.y):
         data.mode = "start"
+        data.password = ""
+        data.username = ""
+
 
 def loginKeyPressed(event, data):
-    pass
+    if data.inputUsername:
+        if event.keysym == "BackSpace":
+            if len(data.username) > 0:
+                data.username = data.username[:-1]
+        elif len(event.keysym) == 1:
+            data.username += event.keysym
+    elif data.inputPassword:
+        if event.keysym == "BackSpace":
+            if len(data.password) > 0:
+                data.password = data.password[:-1]
+        elif len(event.keysym) == 1:
+            data.password += event.keysym
 
 def loginTimerFired(data):
     pass
@@ -192,10 +255,16 @@ def loginRedrawAll(canvas, data):
         font=getFont(30))
     canvas.create_text(data.width*0.3, data.height*0.54, text="password:",
         font=getFont(30))
+    userOutline = "#12e3ff" if data.inputUsername else "black" #TODO: change color to be more aesthetic
+    passOutline = "#12e3ff" if data.inputPassword else "black"
     roundRectangle(canvas, data.width*0.42, data.height*0.35, data.width*0.7,
-        data.height*0.45, width=2, outline="black", fill="white")
+        data.height*0.45, width=2, outline=userOutline, fill="white")
     roundRectangle(canvas, data.width*0.42, data.height*0.49, data.width*0.7,
-        data.height*0.59, width=2, outline="black", fill="white")
+        data.height*0.59, width=2, outline=passOutline, fill="white")
+    canvas.create_text(data.width*0.44, data.height*0.4, text=data.username,
+        font=getFont(25), anchor=W) #TODO: overflow of printing if string too long
+    canvas.create_text(data.width*0.44, data.height*0.54, text=data.password,
+        font=getFont(25), anchor=W)
 
 ################################################################################
 # mode toggle
