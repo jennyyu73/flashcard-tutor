@@ -3,6 +3,7 @@ from PIL import ImageFont, ImageDraw #for fonts
 from tkinter import *
 import tkinter.font
 import string
+import os
 
 ################################################################################
 # initializer
@@ -21,6 +22,7 @@ def init(data):
     data.username = ""
     data.inputPassword = False
     data.inputUsername = False
+    data.warnings = ""
 
 ################################################################################
 # general helpers/classes
@@ -157,13 +159,25 @@ def registerMousePressed(event, data):
         data.inputPassword = False
 
     if data.submitButton.onPress(event.x, event.y):
-        #check non existing user
-        #create user
-        pass
+        #TODO: store all this on mongodb instead of local files 
+        if os.path.isdir("users/%s" % data.username):
+            #if an existing user, can't create this 
+            data.warnings = "Username already in use. Please select a different one."
+        else:
+            os.mkdir("users/%s" % data.username)
+            #f = open("users/%s/credentials.txt" % data.username,"w+")
+            hashedPass = hashlib.sha256(data.password.encode('utf-8')).hexdigest()
+            #f.write(hashedPass)
+            writeFile("users/%s/credentials.txt" % data.username, hashedPass)
+            data.password = ""
+            data.username = ""
+            data.warnings = ""
+            data.mode = "home"
     if data.underlineBackButton.onPress(event.x, event.y):
         data.mode = "start"
         data.password = ""
         data.username = ""
+        data.warnings = ""
 
 def registerKeyPressed(event, data):
     if data.inputUsername:
@@ -201,8 +215,10 @@ def registerRedrawAll(canvas, data):
         data.height*0.59, width=2, outline=passOutline, fill="white")
     canvas.create_text(data.width*0.44, data.height*0.4, text=data.username,
         font=getFont(25), anchor=W) #TODO: overflow of printing if string too long
-    canvas.create_text(data.width*0.44, data.height*0.54, text=data.password,
+    canvas.create_text(data.width*0.44, data.height*0.54, text="*"*len(data.password),
         font=getFont(25), anchor=W)
+    canvas.create_text(data.width*0.1, data.height*0.26, text=data.warnings,
+        font=getFont(25), anchor=W, fill="#ff4747")
 
 ################################################################################
 # login mode
@@ -219,13 +235,23 @@ def loginMousePressed(event, data):
         data.inputPassword = False
 
     if data.submitButton.onPress(event.x, event.y):
-        #login user
-        pass
+        hashedPass = hashlib.sha256(data.password.encode('utf-8')).hexdigest()
+        if not os.path.isdir("users/%s" % data.username):
+            data.warnings = "This user does not exist. Please try again."
+        elif hashedPass != readFile("users/%s/credentials.txt" % data.username):
+            data.warnings = "Your password is incorrect. Please try again."
+        else:
+            data.user = data.username
+            data.mode = "home"
+            data.password = ""
+            data.username = ""
+            data.warnings = ""
 
     if data.underlineBackButton.onPress(event.x, event.y):
         data.mode = "start"
         data.password = ""
         data.username = ""
+        data.warnings = ""
 
 
 def loginKeyPressed(event, data):
@@ -263,8 +289,26 @@ def loginRedrawAll(canvas, data):
         data.height*0.59, width=2, outline=passOutline, fill="white")
     canvas.create_text(data.width*0.44, data.height*0.4, text=data.username,
         font=getFont(25), anchor=W) #TODO: overflow of printing if string too long
-    canvas.create_text(data.width*0.44, data.height*0.54, text=data.password,
+    canvas.create_text(data.width*0.44, data.height*0.54, text="*"*len(data.password),
         font=getFont(25), anchor=W)
+    canvas.create_text(data.width*0.2, data.height*0.26, text=data.warnings,
+        font=getFont(25), anchor=W, fill="#ff4747")
+
+################################################################################
+# home mode
+################################################################################
+
+def homeMousePressed(event, data):
+    pass
+
+def homeKeyPressed(event, data):
+    pass
+
+def homeTimerFired(data):
+    pass
+
+def homeRedrawAll(canvas, data):
+    drawIndexCard(canvas, data)
 
 ################################################################################
 # mode toggle
@@ -279,6 +323,8 @@ def mousePressed(event, data):
         registerMousePressed(event, data)
     elif data.mode == "login":
         loginMousePressed(event, data)
+    elif data.mode == "home":
+        homeMousePressed(event, data)
 
 def keyPressed(event, data):
     if data.mode == "start":
@@ -289,6 +335,8 @@ def keyPressed(event, data):
         registerKeyPressed(event, data)
     elif data.mode == "login":
         loginKeyPressed(event, data)
+    elif data.mode == "home":
+        homeKeyPressed(event, data)
 
 def timerFired(data):
     if data.mode == "start":
@@ -299,6 +347,8 @@ def timerFired(data):
         registerTimerFired(data)
     elif data.mode == "login":
         loginTimerFired(data)
+    elif data.mode == "home":
+        homeTimerFired(data)
 
 def redrawAll(canvas, data):
     if data.mode == "start":
@@ -309,6 +359,8 @@ def redrawAll(canvas, data):
         registerRedrawAll(canvas, data)
     elif data.mode == "login":
         loginRedrawAll(canvas, data)
+    elif data.mode == "home":
+        homeRedrawAll(canvas, data)
 
 
 ################################################################################
