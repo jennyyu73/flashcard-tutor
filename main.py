@@ -5,6 +5,25 @@ import tkinter.font
 import string
 import os
 
+'''
+TODO LIST:
+- minor refinement changes in comments throughout code marked "TODO"
+- home page
+- instructions page
+- upload page
+- profile page
+- progress page
+- practice page
+
+NOTES:
+- profile.txt is of the format: 
+    num_decks\n
+    deck_name:mastery
+    deck_name:mastery
+    ...
+'''
+
+
 ################################################################################
 # initializer
 ################################################################################
@@ -23,6 +42,9 @@ def init(data):
     data.inputPassword = False
     data.inputUsername = False
     data.warnings = ""
+    data.profileButton = Button(data.width*0.9, data.height*0.08, 65, 25, "Profile")
+    data.practiceAllButton = Button(data.width/2, data.height*0.9, 100, 25, "Practice All")
+    data.logoutButton = UnderlineButton(data.width*0.08, data.height*0.08, 35, 15, "Logout")
 
 ################################################################################
 # general helpers/classes
@@ -87,6 +109,15 @@ class UnderlineButton(Button):
             fill="black")
         canvas.create_text(self.x, self.y, text=self.text, font=getFont(fontSize))
 
+def drawDeck(canvas, data, row, deck, deckName, fillColor="white"):
+    #print(deckName, row)
+    for i in range(4, 0, -1):
+        x0 = data.width*0.12 + data.width*0.2*deck + i*3
+        y0 = data.height*0.2 + data.height*0.2*row + i*3
+        x1 = x0 + data.width*0.15
+        y1 = y0 + data.height*0.15
+        roundRectangle(canvas, x0, y0, x1, y1, fill=fillColor, width=2, outline="black")
+    canvas.create_text((x0 + x1)/2, (y0 + y1)/2, text=deckName, font=getFont(25)) 
 
 ################################################################################
 # start mode
@@ -169,9 +200,11 @@ def registerMousePressed(event, data):
             hashedPass = hashlib.sha256(data.password.encode('utf-8')).hexdigest()
             #f.write(hashedPass)
             writeFile("users/%s/credentials.txt" % data.username, hashedPass)
+            writeFile("users/%s/profile.txt" % data.username, "0")
             data.password = ""
             data.username = ""
             data.warnings = ""
+            data.user = data.username
             data.mode = "home"
     if data.underlineBackButton.onPress(event.x, event.y):
         data.mode = "start"
@@ -184,6 +217,9 @@ def registerKeyPressed(event, data):
         if event.keysym == "BackSpace":
             if len(data.username) > 0:
                 data.username = data.username[:-1]
+        elif event.keysym == "Tab":
+            data.inputUsername = False
+            data.inputPassword = True
         elif len(event.keysym) == 1:
             data.username += event.keysym
     elif data.inputPassword:
@@ -259,6 +295,9 @@ def loginKeyPressed(event, data):
         if event.keysym == "BackSpace":
             if len(data.username) > 0:
                 data.username = data.username[:-1]
+        elif event.keysym == "Tab":
+            data.inputUsername = False
+            data.inputPassword = True
         elif len(event.keysym) == 1:
             data.username += event.keysym
     elif data.inputPassword:
@@ -299,7 +338,11 @@ def loginRedrawAll(canvas, data):
 ################################################################################
 
 def homeMousePressed(event, data):
-    pass
+    if data.profileButton.onPress(event.x, event.y):
+        data.mode = "profile"
+    elif data.logoutButton.onPress(event.x, event.y):
+        data.mode = "start"
+        data.user = ""
 
 def homeKeyPressed(event, data):
     pass
@@ -308,7 +351,23 @@ def homeTimerFired(data):
     pass
 
 def homeRedrawAll(canvas, data):
+    #TODO: enable scrolling if too many decks on one page 
     drawIndexCard(canvas, data)
+    canvas.create_text(data.width/2, data.height*0.1, text="Your Decks",
+        font=getFont(40))
+    data.profileButton.draw(canvas, 25)
+    numDecks = int(readFile("users/%s/profile.txt" % data.user).splitlines()[0])
+    decks = readFile("users/%s/profile.txt" % data.user).splitlines()[1:]
+    decks = list(map(lambda s: s.split(":")[0], decks))
+    for row in range(numDecks//4 + 1):
+        for deck in range(4 if (row + 1)*4 <= numDecks else (numDecks % 4)):
+            deckName = decks[row*4 + deck]            
+            drawDeck(canvas, data, row, deck, deckName)
+    uploadRow = (numDecks + 1)//4
+    uploadCol = (numDecks + 1) % 4 - 1
+    drawDeck(canvas, data, uploadRow, uploadCol, "+Upload", "#d9f5ff")
+    data.practiceAllButton.draw(canvas, 25)
+    data.logoutButton.draw(canvas, 18)
 
 ################################################################################
 # mode toggle
