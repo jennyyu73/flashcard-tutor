@@ -1,9 +1,9 @@
 import hashlib #for sha encoding
-from PIL import ImageFont, ImageDraw #for fonts
 from tkinter import *
 import tkinter.font
 import string
 import os
+import tkinter.filedialog
 
 '''
 TODO LIST:
@@ -11,8 +11,6 @@ TODO LIST:
 - home page
 - instructions page
 - upload page
-- profile page
-- progress page
 - practice page
 - practice all button when there are no decks 
 
@@ -36,8 +34,8 @@ def init(data):
     data.creditButton = Button(data.width*0.9, data.height*0.9, 70, 25, "Credit")
     data.creditBackButton = Button(data.width/2, data.height*0.85, 80, 25, "< Back")
     data.submitButton = Button(data.width/2, data.height*0.8, 80, 25, "Submit")
-    data.underlineBackButton = UnderlineButton(data.width/2, data.height*0.9,
-        30, 20, "Back")
+    data.underlineBackButton = UnderlineButton(data.width/2, data.height*0.89,
+        30, 15, "Back")
     data.password = ""
     data.username = ""
     data.inputPassword = False
@@ -47,6 +45,8 @@ def init(data):
     data.practiceAllButton = Button(data.width/2, data.height*0.9, 100, 25, "Practice All")
     data.logoutButton = UnderlineButton(data.width*0.08, data.height*0.08, 35, 15, "Logout")
     data.cornerBackButton = Button(data.width*0.1, data.height*0.08, 50, 25, "< Back")
+    data.chooseFileButton =  Button(data.width*0.45, data.height*0.4, 75, 20, 
+        "Choose File")
 
 ################################################################################
 # general helpers/classes
@@ -351,6 +351,31 @@ def homeMousePressed(event, data):
     elif data.logoutButton.onPress(event.x, event.y):
         data.mode = "start"
         data.user = ""
+    else:
+        innerBreak = False
+        for row in range(data.numDecks//4 + 1):
+            for deck in range(4 if (row + 1)*4 <= data.numDecks else (data.numDecks % 4)):
+                deckIndex = row*4 + deck            
+                x0 = data.width*0.12 + data.width*0.2*deck
+                y0 = data.height*0.2 + data.height*0.2*row
+                x1 = x0 + data.width*0.15
+                y1 = y0 + data.height*0.15
+                if x0 < event.x < x1 and y0 < event.y < y1:
+                    data.pressedDeck = deckIndex
+                    data.mode = "practice"
+                    innerBreak = True
+                    break 
+            if innerBreak: break 
+        uploadRow = (data.numDecks + 1)//4
+        uploadCol = (data.numDecks + 1) % 4 - 1
+        x0 = data.width*0.12 + data.width*0.2*uploadCol
+        y0 = data.height*0.2 + data.height*0.2*uploadRow
+        x1 = x0 + data.width*0.15
+        y1 = y0 + data.height*0.15
+        if x0 < event.x < x1 and y0 < event.y < y1:
+            data.mode = "upload"
+            data.pressedDeck = "" 
+            data.uploadedFile = ""
 
 def homeKeyPressed(event, data):
     pass
@@ -422,6 +447,37 @@ def profileRedrawAll(canvas, data):
         canvas.create_text(data.width/2, data.height*0.4, 
             text="You haven't uploaded any decks yet.", font=getFont(25))
 
+################################################################################
+# upload mode
+################################################################################
+
+def uploadMousePressed(event, data):
+    if data.underlineBackButton.onPress(event.x, event.y):
+        data.mode = "home"
+        data.uploadedFile = ""
+    elif data.chooseFileButton.onPress(event.x, event.y):
+        data.uploadedFile = tkinter.filedialog.askopenfilename() 
+    elif data.submitButton.onPress(event.x, event.y):
+        #TODO: save file 
+        pass
+
+def uploadKeyPressed(event, data):
+    pass
+
+def uploadTimerFired(data):
+    pass
+
+def uploadRedrawAll(canvas, data):
+    drawIndexCard(canvas, data)
+    canvas.create_text(data.width/2, data.height*0.1, text="Upload new deck",
+        font=getFont(40))
+    canvas.create_text(data.width*0.3, data.height*0.4, text="File:", font=getFont(25))
+    data.chooseFileButton.draw(canvas, 20)
+    canvas.create_text(data.width*0.57, data.height*0.4, font=getFont(25), anchor=W,
+        text=("No file chosen" if data.uploadedFile == "" else data.uploadedFile.split("/")[-1])) 
+    data.underlineBackButton.draw(canvas, 20)
+    data.submitButton.draw(canvas, 25) 
+
 
 
 ################################################################################
@@ -441,6 +497,8 @@ def mousePressed(event, data):
         homeMousePressed(event, data)
     elif data.mode == "profile":
         profileMousePressed(event, data)
+    elif data.mode == "upload":
+        uploadMousePressed(event, data)
 
 def keyPressed(event, data):
     if data.mode == "start":
@@ -455,6 +513,8 @@ def keyPressed(event, data):
         homeKeyPressed(event, data)
     elif data.mode == "profile":
         profileKeyPressed(event, data)
+    elif data.mode == "upload":
+        uploadKeyPressed(event, data)
 
 def timerFired(data):
     if data.mode == "start":
@@ -469,6 +529,8 @@ def timerFired(data):
         homeTimerFired(data)
     elif data.mode == "profile":
         profileTimerFired(data)
+    elif data.mode == "upload":
+        uploadTimerFired(data)
 
 def redrawAll(canvas, data):
     if data.mode == "start":
@@ -483,6 +545,8 @@ def redrawAll(canvas, data):
         homeRedrawAll(canvas, data)
     elif data.mode == "profile":
         profileRedrawAll(canvas, data)
+    elif data.mode == "upload":
+        uploadRedrawAll(canvas, data)
 
 
 ################################################################################
