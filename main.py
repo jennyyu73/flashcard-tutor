@@ -1,4 +1,4 @@
-import hashlib #for sha256 encoding
+import hashlib #for sha encoding
 from PIL import ImageFont, ImageDraw #for fonts
 from tkinter import *
 import tkinter.font
@@ -14,6 +14,7 @@ TODO LIST:
 - profile page
 - progress page
 - practice page
+- practice all button when there are no decks 
 
 NOTES:
 - profile.txt is of the format: 
@@ -45,6 +46,7 @@ def init(data):
     data.profileButton = Button(data.width*0.9, data.height*0.08, 65, 25, "Profile")
     data.practiceAllButton = Button(data.width/2, data.height*0.9, 100, 25, "Practice All")
     data.logoutButton = UnderlineButton(data.width*0.08, data.height*0.08, 35, 15, "Logout")
+    data.cornerBackButton = Button(data.width*0.1, data.height*0.08, 50, 25, "< Back")
 
 ################################################################################
 # general helpers/classes
@@ -206,6 +208,8 @@ def registerMousePressed(event, data):
             data.warnings = ""
             data.user = data.username
             data.mode = "home"
+            data.numDecks = 0
+            data.decks = []
     if data.underlineBackButton.onPress(event.x, event.y):
         data.mode = "start"
         data.password = ""
@@ -282,6 +286,9 @@ def loginMousePressed(event, data):
             data.password = ""
             data.username = ""
             data.warnings = ""
+            data.numDecks = int(readFile("users/%s/profile.txt" % data.user).splitlines()[0])
+            data.decks = readFile("users/%s/profile.txt" % data.user).splitlines()[1:]
+            data.decks = list(map(lambda s: s.split(":"), data.decks))
 
     if data.underlineBackButton.onPress(event.x, event.y):
         data.mode = "start"
@@ -340,6 +347,7 @@ def loginRedrawAll(canvas, data):
 def homeMousePressed(event, data):
     if data.profileButton.onPress(event.x, event.y):
         data.mode = "profile"
+        data.shownIndex = 0
     elif data.logoutButton.onPress(event.x, event.y):
         data.mode = "start"
         data.user = ""
@@ -352,22 +360,69 @@ def homeTimerFired(data):
 
 def homeRedrawAll(canvas, data):
     #TODO: enable scrolling if too many decks on one page 
+    #TODO: change fontsize if name of deck is too long/short
     drawIndexCard(canvas, data)
     canvas.create_text(data.width/2, data.height*0.1, text="Your Decks",
         font=getFont(40))
     data.profileButton.draw(canvas, 25)
-    numDecks = int(readFile("users/%s/profile.txt" % data.user).splitlines()[0])
-    decks = readFile("users/%s/profile.txt" % data.user).splitlines()[1:]
-    decks = list(map(lambda s: s.split(":")[0], decks))
-    for row in range(numDecks//4 + 1):
-        for deck in range(4 if (row + 1)*4 <= numDecks else (numDecks % 4)):
-            deckName = decks[row*4 + deck]            
+    for row in range(data.numDecks//4 + 1):
+        for deck in range(4 if (row + 1)*4 <= data.numDecks else (data.numDecks % 4)):
+            deckName = data.decks[row*4 + deck][0]            
             drawDeck(canvas, data, row, deck, deckName)
-    uploadRow = (numDecks + 1)//4
-    uploadCol = (numDecks + 1) % 4 - 1
-    drawDeck(canvas, data, uploadRow, uploadCol, "+Upload", "#d9f5ff")
+    uploadRow = (data.numDecks + 1)//4
+    uploadCol = (data.numDecks + 1) % 4 - 1
+    drawDeck(canvas, data, uploadRow, uploadCol, "+Upload", "#89ddf0")
     data.practiceAllButton.draw(canvas, 25)
     data.logoutButton.draw(canvas, 18)
+
+################################################################################
+# profile mode
+################################################################################
+
+def profileMousePressed(event, data):
+    if data.cornerBackButton.onPress(event.x, event.y):
+        data.mode = "home"
+
+def profileKeyPressed(event, data):
+    #scrolling 
+    if event.keysym == "Down" and data.shownIndex + 5 < len(data.decks):
+        data.shownIndex += 1
+    elif event.keysym == "Up" and data.shownIndex > 0:
+        data.shownIndex -= 1
+
+def profileTimerFired(data):
+    pass
+
+def profileRedrawAll(canvas, data):
+    drawIndexCard(canvas, data)
+    canvas.create_text(data.width/2, data.height*0.1, text=("%s's Profile" % data.user),
+        font=getFont(40))
+    data.cornerBackButton.draw(canvas, 18)
+    for i in range(data.shownIndex, data.shownIndex + 5):
+        if (i + 1) > len(data.decks):
+            break
+        name = data.decks[i][0]
+        mastery = int(data.decks[i][1])
+        x = data.width*0.15 
+        y = data.height*0.26 + (i - data.shownIndex)*data.height*0.14
+        canvas.create_text(x, y, text=(name + ":"), font=getFont(30))
+        x0 = x + data.width*0.12
+        y0 = y - data.height*0.037
+        x1 = x0 + data.width*0.5
+        y1 = y0 + data.height*0.07
+        x2 = x0 + (x1 - x0)*mastery/100
+        x3 = data.width*0.85
+        if mastery > 0:
+            roundRectangle(canvas, x0, y0, x2, y1, 25, fill="#67d3eb", width=2,
+                outline="")
+        roundRectangle(canvas, x0, y0, x1, y1, fill="", width=2,
+            outline="black")
+        canvas.create_text(x3, y, text="%d %%" % mastery, font=getFont(30), anchor=W)
+    if len(data.decks) == 0:
+        canvas.create_text(data.width/2, data.height*0.4, 
+            text="You haven't uploaded any decks yet.", font=getFont(25))
+
+
 
 ################################################################################
 # mode toggle
@@ -384,6 +439,8 @@ def mousePressed(event, data):
         loginMousePressed(event, data)
     elif data.mode == "home":
         homeMousePressed(event, data)
+    elif data.mode == "profile":
+        profileMousePressed(event, data)
 
 def keyPressed(event, data):
     if data.mode == "start":
@@ -396,6 +453,8 @@ def keyPressed(event, data):
         loginKeyPressed(event, data)
     elif data.mode == "home":
         homeKeyPressed(event, data)
+    elif data.mode == "profile":
+        profileKeyPressed(event, data)
 
 def timerFired(data):
     if data.mode == "start":
@@ -408,6 +467,8 @@ def timerFired(data):
         loginTimerFired(data)
     elif data.mode == "home":
         homeTimerFired(data)
+    elif data.mode == "profile":
+        profileTimerFired(data)
 
 def redrawAll(canvas, data):
     if data.mode == "start":
@@ -420,6 +481,8 @@ def redrawAll(canvas, data):
         loginRedrawAll(canvas, data)
     elif data.mode == "home":
         homeRedrawAll(canvas, data)
+    elif data.mode == "profile":
+        profileRedrawAll(canvas, data)
 
 
 ################################################################################

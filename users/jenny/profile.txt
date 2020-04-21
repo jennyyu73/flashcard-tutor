@@ -1,6 +1,6 @@
 5
 French:0
-Chem:0
-CS:1
-Systems:0
+Chem:50
+CS:3
+Systems:5
 Orgo:9
