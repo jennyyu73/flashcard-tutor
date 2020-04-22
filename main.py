@@ -4,6 +4,7 @@ import tkinter.font
 import string
 import os
 import tkinter.filedialog
+import random
 
 '''
 TODO LIST:
@@ -44,9 +45,10 @@ def init(data):
     data.profileButton = Button(data.width*0.9, data.height*0.08, 65, 25, "Profile")
     data.practiceAllButton = Button(data.width/2, data.height*0.9, 100, 25, "Practice All")
     data.logoutButton = UnderlineButton(data.width*0.08, data.height*0.08, 35, 15, "Logout")
-    data.cornerBackButton = Button(data.width*0.1, data.height*0.08, 50, 25, "< Back")
+    data.cornerBackButton = Button(data.width*0.1, data.height*0.08, 50, 20, "< Back")
     data.chooseFileButton =  Button(data.width*0.45, data.height*0.4, 75, 20, 
         "Choose File")
+    data.nextButton = Button(data.width/2, data.height*0.85, 70, 25, "Next")
 
 ################################################################################
 # general helpers/classes
@@ -361,7 +363,11 @@ def homeMousePressed(event, data):
                 x1 = x0 + data.width*0.15
                 y1 = y0 + data.height*0.15
                 if x0 < event.x < x1 and y0 < event.y < y1:
-                    data.pressedDeck = deckIndex
+                    data.practicingDeckName = data.decks[deckIndex][0]
+                    data.practicingDeck = readFile('users/%s/%s' % (data.user, data.practicingDeckName + ".csv")).splitlines()
+                    data.practicingDeck = list(map(lambda s: s.split(",") if "," in s else s.split("\t"), 
+                        data.practicingDeck))
+                    data.cardIndex = random.randint(0, len(data.practicingDeck) - 1) #randomize starting card
                     data.mode = "practice"
                     innerBreak = True
                     break 
@@ -378,6 +384,7 @@ def homeMousePressed(event, data):
             data.uploadedFile = ""
 
 def homeKeyPressed(event, data):
+    #TODO: enable scrolling with arrow keys 
     pass
 
 def homeTimerFired(data):
@@ -458,8 +465,18 @@ def uploadMousePressed(event, data):
     elif data.chooseFileButton.onPress(event.x, event.y):
         data.uploadedFile = tkinter.filedialog.askopenfilename() 
     elif data.submitButton.onPress(event.x, event.y):
-        #TODO: save file 
-        pass
+        #copy file to user folder
+        name = data.uploadedFile.split("/")[-1]
+        writeFile('users/' + data.user + "/" + name, readFile(data.uploadedFile))
+        #edit profile 
+        profile = readFile('users/%s/profile.txt' % data.user)
+        data.numDecks = int(profile.splitlines()[0]) + 1
+        profile = str(data.numDecks) + profile[len(str(data.numDecks)):]
+        profile += ("\n%s:0" % name.split(".")[0])
+        writeFile('users/%s/profile.txt' % data.user, profile)
+        data.decks.append([name.split(".")[0], 0])
+        data.mode = "home"
+        data.uploadedFile = ""
 
 def uploadKeyPressed(event, data):
     pass
@@ -478,6 +495,39 @@ def uploadRedrawAll(canvas, data):
     data.underlineBackButton.draw(canvas, 20)
     data.submitButton.draw(canvas, 25) 
 
+################################################################################
+# practice single deck mode
+################################################################################
+
+def practiceMousePressed(event, data):
+    if data.cornerBackButton.onPress(event.x, event.y):
+        data.mode = "home"
+    elif data.nextButton.onPress(event.x, event.y):
+        #need to update mastery and stuff 
+        pass 
+    print(data.practicingDeck[data.cardIndex])
+
+def practiceKeyPressed(event, data):
+    pass
+
+def practiceTimerFired(data):
+    pass
+
+def practiceRedrawAll(canvas, data):
+    drawIndexCard(canvas, data)
+    canvas.create_text(data.width/2, data.height*0.1, 
+        text="Practicing %s Deck" % data.practicingDeckName, font=getFont(40))
+    data.nextButton.draw(canvas, 25)
+    data.cornerBackButton.draw(canvas, 18)
+    roundRectangle(canvas, data.width*0.15, data.height*0.3, data.width*0.45, 
+        data.height*0.6, fill="white", outline="black", width=2)
+    roundRectangle(canvas, data.width*0.55, data.height*0.3, data.width*0.85, 
+        data.height*0.6, fill="white", outline="black", width=2)
+    canvas.create_text(data.width*0.3, data.height*0.26, text="Term", font=getFont(25))
+    canvas.create_text(data.width*0.7, data.height*0.26, text="Definition", font=getFont(25))
+    canvas.create_text(data.width*0.3, data.height*0.45, 
+        text=data.practicingDeck[data.cardIndex][0], font=getFont(40))
+    #need 5 stars/circles to indicate confidence 
 
 
 ################################################################################
@@ -499,6 +549,8 @@ def mousePressed(event, data):
         profileMousePressed(event, data)
     elif data.mode == "upload":
         uploadMousePressed(event, data)
+    elif data.mode == "practice":
+        practiceMousePressed(event, data)
 
 def keyPressed(event, data):
     if data.mode == "start":
@@ -515,6 +567,8 @@ def keyPressed(event, data):
         profileKeyPressed(event, data)
     elif data.mode == "upload":
         uploadKeyPressed(event, data)
+    elif data.mode == "practice":
+        practiceKeyPressed(event, data)
 
 def timerFired(data):
     if data.mode == "start":
@@ -531,6 +585,8 @@ def timerFired(data):
         profileTimerFired(data)
     elif data.mode == "upload":
         uploadTimerFired(data)
+    elif data.mode == "practice":
+        practiceTimerFired(data)
 
 def redrawAll(canvas, data):
     if data.mode == "start":
@@ -547,6 +603,8 @@ def redrawAll(canvas, data):
         profileRedrawAll(canvas, data)
     elif data.mode == "upload":
         uploadRedrawAll(canvas, data)
+    elif data.mode == "practice":
+        practiceRedrawAll(canvas, data)
 
 
 ################################################################################
