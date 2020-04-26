@@ -49,6 +49,10 @@ def init(data):
     data.chooseFileButton =  Button(data.width*0.45, data.height*0.4, 75, 20, 
         "Choose File")
     data.nextButton = Button(data.width/2, data.height*0.85, 70, 25, "Next")
+    data.definition = ""
+    data.inputDefinition = False
+    data.confidence = 0
+    data.correct = None
 
 ################################################################################
 # general helpers/classes
@@ -249,8 +253,8 @@ def registerRedrawAll(canvas, data):
         font=getFont(30))
     canvas.create_text(data.width*0.3, data.height*0.54, text="password:",
         font=getFont(30))
-    userOutline = "#12e3ff" if data.inputUsername else "black" #TODO: change color
-    passOutline = "#12e3ff" if data.inputPassword else "black"
+    userOutline = "#ff7575" if data.inputUsername else "black" #TODO: change color
+    passOutline = "#ff7575" if data.inputPassword else "black"
     roundRectangle(canvas, data.width*0.42, data.height*0.35, data.width*0.7,
         data.height*0.45, width=2, outline=userOutline, fill="white")
     roundRectangle(canvas, data.width*0.42, data.height*0.49, data.width*0.7,
@@ -329,8 +333,8 @@ def loginRedrawAll(canvas, data):
         font=getFont(30))
     canvas.create_text(data.width*0.3, data.height*0.54, text="password:",
         font=getFont(30))
-    userOutline = "#12e3ff" if data.inputUsername else "black" #TODO: change color to be more aesthetic
-    passOutline = "#12e3ff" if data.inputPassword else "black"
+    userOutline = "#ff7575" if data.inputUsername else "black" #TODO: change color to be more aesthetic
+    passOutline = "#ff7575" if data.inputPassword else "black"
     roundRectangle(canvas, data.width*0.42, data.height*0.35, data.width*0.7,
         data.height*0.45, width=2, outline=userOutline, fill="white")
     roundRectangle(canvas, data.width*0.42, data.height*0.49, data.width*0.7,
@@ -503,30 +507,78 @@ def practiceMousePressed(event, data):
     if data.cornerBackButton.onPress(event.x, event.y):
         data.mode = "home"
     elif data.nextButton.onPress(event.x, event.y):
-        #need to update mastery and stuff 
-        pass 
-    print(data.practicingDeck[data.cardIndex])
+        #need to update mastery and stuff, check correctness
+        if data.correct == None:
+            if data.practicingDeck[data.cardIndex][1].lower() == data.definition.lower():
+                data.correct = True #TODO
+            else:
+                data.correct = False 
+        else:
+            #select new card
+            data.correct = None
+            data.cardIndex = random.randint(0, len(data.practicingDeck) - 1)
+            data.definition = ""
+
+    if (data.width*0.55 < event.x < data.width*0.85) and (data.height*0.3 < event.y < data.height*0.6):
+        data.inputDefinition = True
+    else:
+        data.inputDefinition = False
+    for i in range(5):
+        x0 = data.width*0.46 + i*45
+        y0 = data.height*0.71
+        x1 = x0 + 35
+        y1 = y0 + 35
+        if (x0 < event.x < x1) and (y0 < event.y < y1):
+            data.confidence = i + 1
+
 
 def practiceKeyPressed(event, data):
-    pass
+    if data.inputDefinition:
+        if event.keysym == "BackSpace":
+            if len(data.definition) > 0:
+                data.definition = data.definition[:-1]
+        elif event.keysym == "Tab":
+            data.inputDefinition = False
+        elif len(event.keysym) == 1:
+            data.definition += event.keysym
+
 
 def practiceTimerFired(data):
     pass
 
 def practiceRedrawAll(canvas, data):
+    #TODO: adjust font size based on how long the input strings are 
     drawIndexCard(canvas, data)
     canvas.create_text(data.width/2, data.height*0.1, 
         text="Practicing %s Deck" % data.practicingDeckName, font=getFont(40))
     data.nextButton.draw(canvas, 25)
     data.cornerBackButton.draw(canvas, 18)
-    roundRectangle(canvas, data.width*0.15, data.height*0.3, data.width*0.45, 
-        data.height*0.6, fill="white", outline="black", width=2)
-    roundRectangle(canvas, data.width*0.55, data.height*0.3, data.width*0.85, 
-        data.height*0.6, fill="white", outline="black", width=2)
-    canvas.create_text(data.width*0.3, data.height*0.26, text="Term", font=getFont(25))
-    canvas.create_text(data.width*0.7, data.height*0.26, text="Definition", font=getFont(25))
-    canvas.create_text(data.width*0.3, data.height*0.45, 
-        text=data.practicingDeck[data.cardIndex][0], font=getFont(40))
+    if data.correct == None:
+        roundRectangle(canvas, data.width*0.15, data.height*0.3, data.width*0.45, 
+            data.height*0.6, fill="white", outline="black", width=2)
+        defFill = "black" if not data.inputDefinition else "#ff7575"
+        roundRectangle(canvas, data.width*0.55, data.height*0.3, data.width*0.85, 
+            data.height*0.6, fill="white", outline=defFill, width=2) # definition 
+        canvas.create_text(data.width*0.3, data.height*0.26, text="Term", font=getFont(25))
+        canvas.create_text(data.width*0.7, data.height*0.26, text="Definition", font=getFont(25))
+        canvas.create_text(data.width*0.3, data.height*0.45, 
+            text=data.practicingDeck[data.cardIndex][0], font=getFont(40))
+        canvas.create_text(data.width*0.7, data.height*0.45, text=data.definition,
+            font=getFont(40)) #user input definition 
+        canvas.create_text(data.width*0.36, data.height*0.75, text="Confidence:",
+            font=getFont(25))
+        for i in range(5):
+            x0 = data.width*0.46 + i*45
+            y0 = data.height*0.71
+            x1 = x0 + 35
+            y1 = y0 + 35
+            cFill = "white" if i >= data.confidence else "#67d3eb"
+            canvas.create_oval(x0, y0, x1, y1, fill=cFill, width=2)
+    else:
+        feedback = "correct" if data.correct else "incorrect"
+        canvas.create_text(data.width/2, data.height*0.4, 
+            text="Your answer is %s." % feedback, font=getFont(25))
+
     #need 5 stars/circles to indicate confidence 
 
 
